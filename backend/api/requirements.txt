@@ -1,0 +1,20 @@
+# VidyaMitra API - Optimized for 1GB RAM VPS
+
+# Core (minimal)
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# HTTP (async)
+httpx>=0.26.0
+
+# Performance (optional - install for production)
+uvloop>=0.19.0
+httptools>=0.6.0
+
+# Supabase (optional - only if using DB)
+# supabase>=2.0.0
+
+# Environment
+python-dotenv>=1.0.0

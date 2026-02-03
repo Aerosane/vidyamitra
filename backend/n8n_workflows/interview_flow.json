@@ -1,0 +1,33 @@
+{
+  "name": "VidyaMitra Complete Interview Flow",
+  "nodes": [
+    {
+      "id": "start",
+      "name": "Start Interview",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {"path": "interview-start", "httpMethod": "POST"}
+    },
+    {
+      "id": "gen_questions",
+      "name": "Generate Questions",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "http://your-api:8000/api/webhook/interview/start",
+        "method": "POST",
+        "sendBody": true,
+        "jsonBody": "={{ JSON.stringify({ user_id: $json.user_id, data: { domain: $json.domain, role: $json.role, question_count: 5 } }) }}"
+      }
+    },
+    {
+      "id": "evaluate",
+      "name": "Evaluate Answer",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "http://your-api:8000/api/webhook/interview/evaluate",
+        "method": "POST",
+        "sendBody": true,
+        "jsonBody": "={{ JSON.stringify({ user_id: $json.user_id, data: { question: $json.question, answer: $json.answer, expected_points: $json.expected_points } }) }}"
+      }
+    }
+  ]
+}
