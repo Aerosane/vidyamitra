@@ -1,0 +1,152 @@
+{
+  "name": "1. Resume Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume/analyze",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        224
+      ],
+      "id": "1e691563-5cc0-4ae3-842e-85f286eab98f",
+      "name": "Webhook",
+      "webhookId": "0ae4a7ec-4275-49a9-b4d5-e14695c03290"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert ATS (Applicant Tracking System).\nAnalyze this resume text:\n{{ $json.body.data.resume_text }}\n\nFor this target role:\n{{ $json.body.data.target_role }}\n\nReturn a strict JSON object with this structure:\n{\n  \"score\": (integer 0-100),\n  \"grade\": (string A-F),\n  \"summary\": (string),\n  \"strengths\": (array of strings),\n  \"improvements\": (array of strings),\n  \"missing_keywords\": (array of strings)\n}\nOutput ONLY valid JSON. Do not use Markdown (```json).\nIMPORTANT: You must output ONLY valid JSON.\nDo not wrap it in markdown (no ```json).\nDo not add any conversational text before or after.\nJust the raw JSON object.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        176,
+        224
+      ],
+      "id": "0afcd5c5-bfed-407b-b3cc-babba374825f",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        176,
+        416
+      ],
+      "id": "b427425c-0b4a-4651-8462-9484f2b8dd05",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output;\nconst jsonStart = text.indexOf('{');\nconst jsonEnd = text.lastIndexOf('}');\nreturn { \"status\": \"ok\", \"analysis\": JSON.parse(text.substring(jsonStart, jsonEnd + 1)) };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        224
+      ],
+      "id": "9ada3afe-a78a-4944-889b-dd4cc7845421",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        768,
+        224
+      ],
+      "id": "a6c77ce4-e42b-4f11-90bc-dbeb2b1f909f",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "ec2475f8-d852-4c86-a9b6-2723fa786f8b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "d5CkrWlaZSPabsJiqqdad",
+  "tags": []
+}

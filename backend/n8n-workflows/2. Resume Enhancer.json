@@ -1,0 +1,155 @@
+{
+  "name": "2. Resume Enhancer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume/enhance",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        80
+      ],
+      "id": "7c41d9be-a957-43ff-a42a-c65e327ecf19",
+      "name": "Webhook",
+      "webhookId": "508b144c-0780-4fd3-ab55-99f6b12b8ad8"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an Expert Resume Writer and ATS Optimizer.\nRewrite the following resume content to be \"Result-Oriented\", \"Quantified\", and tailored for the target role.\n\nTarget Role: {{ $json.body.data.target_role }}\nOriginal Resume: {{ $json.body.data.resume_text }}\n\nTasks:\n1. Estimate the ATS Score (0-100) of the *original* text.\n2. Rewrite the resume using the STAR method (Situation, Task, Action, Result) in Markdown format.\n3. Estimate the new ATS Score of your *enhanced* version.\n4. List 3 specific changes you made.\n\nOutput a STRICT JSON object with this schema:\n{\n  \"enhanced_resume\": \"(String: The full rewritten resume in Markdown)\",\n  \"changes\": [\"(String)\", \"(String)\", \"(String)\"],\n  \"ats_score_before\": (Integer),\n  \"ats_score_after\": (Integer)\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "{{ $json.body.resume_text }} | Role: {{ $json.body.target_role }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        192,
+        0
+      ],
+      "id": "3bc9b8e7-210f-4bd6-9f78-d0e91cbe899e",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        192,
+        192
+      ],
+      "id": "5c87292c-ef91-42f1-b0c5-451111e4de6f",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        720,
+        0
+      ],
+      "id": "5cc1e766-f422-49b6-996b-723250fa9134",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get AI Text\nconst text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  // 2. Find JSON start/end\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1 || jsonEnd === -1) {\n    throw new Error(\"No JSON found\");\n  }\n\n  // 3. Parse and Return\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  return {\n    \"status\": \"ok\",\n    \"enhanced\": result // This nests the AI result under \"enhanced\" key as per your API spec\n  };\n\n} catch (error) {\n  return { \n    \"status\": \"error\", \n    \"message\": \"AI failed to enhance resume\",\n    \"raw_output\": text\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        0
+      ],
+      "id": "e8e177c1-122d-44cd-872f-a5bc1213d438",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "61146855-2da3-4126-8e09-ea5d62187b87",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "y52jHjMGKQ-Z5tOwprPBE",
+  "tags": []
+}

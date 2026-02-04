@@ -1,0 +1,154 @@
+{
+  "name": "7. Quiz Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quiz/generate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c19dd731-da80-4d4f-8212-cba212556578",
+      "name": "Webhook",
+      "webhookId": "daad6e2a-53ad-424f-8d35-0e3b00de586d"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Technical Quiz Master.\nCreate 5 Multiple Choice Questions (MCQs) to test the user's knowledge of: {{ $json.body.data.skill }}\nDifficulty Level: {{ $json.body.data.difficulty }}\n\nReturn a STRICT JSON object with a \"questions\" array.\nEach question object must have:\n- id (integer 1-5)\n- text (The question string)\n- options (Array of 4 strings)\n- correct_option (Integer index 0-3, indicating which option is correct)\n- explanation (String: Why it is correct)\n\nExample:\n{\n  \"questions\": [\n    {\n      \"id\": 1,\n      \"text\": \"What is the output of print(2**3)?\",\n      \"options\": [\"6\", \"8\", \"9\", \"Error\"],\n      \"correct_option\": 1,\n      \"explanation\": \"2**3 is 2 to the power of 3, which is 8.\"\n    }\n  ]\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=you are an expert technical interviewer. Create 5 multiple-choice questions (MCQs) for the skill: {{ $json.data.skill }} at an {{ $json.data.difficulty }} difficulty level."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f47e8b5b-3cad-4c88-b9a2-7cddfee6d53f",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        128,
+        208
+      ],
+      "id": "32de1d3e-c8a9-449e-bcac-762e696c6eca",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1) throw new Error(\"No JSON found\");\n\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  // Add a Quiz ID\n  const quizId = \"quiz_\" + Math.random().toString(36).substring(2, 9);\n\n  return {\n    \"status\": \"ok\",\n    \"quiz_id\": quizId,\n    \"questions\": result.questions\n  };\n\n} catch (error) {\n  return { \"status\": \"error\", \"message\": \"Failed to generate quiz\" };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "510e7b51-b054-4f34-adc2-eac57371fb63",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        768,
+        0
+      ],
+      "id": "c603c1a6-ccb6-4495-a2aa-5b87d3bba91d",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "09dd6257-c7e1-4b05-a2d5-a55818f3db86",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "GCwk8102VrZ5YkLqRA_rH",
+  "tags": []
+}
