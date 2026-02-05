@@ -2,6 +2,12 @@
 
 Base URL: `http://localhost:8000/api`
 
+## Overview
+
+This is the **FastAPI server** - the primary backend for VidyaMitra frontend.
+
+**Alternative:** n8n workflows also provide AI endpoints with the same request/response format. See [backend/n8n-workflows/N8N.md](backend/n8n-workflows/N8N.md).
+
 ## Authentication
 
 Most endpoints require a Bearer token (Clerk JWT) in the Authorization header:
@@ -9,7 +15,7 @@ Most endpoints require a Bearer token (Clerk JWT) in the Authorization header:
 Authorization: Bearer <clerk_jwt_token>
 ```
 
-**Webhook endpoints** (`/api/webhook/*`) do not require auth - designed for n8n integration.
+**Webhook endpoints** (`/api/webhook/*`) do not require auth - designed for direct frontend calls or n8n integration.
 
 ---
 

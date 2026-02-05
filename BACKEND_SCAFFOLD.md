@@ -1,17 +1,41 @@
 # VidyāMitra Backend Scaffold 
-## n8n Automation-Ready Backend Architecture
+## API-First Architecture with Optional n8n Integration
 
 ---
 
 ## 📋 Overview
 
-VidyāMitra is an AI-powered career guidance platform for resume evaluation, skill assessment, mock interviews, and personalized learning paths. This scaffold defines a **FastAPI backend** designed for seamless **n8n automation/workflow integration**.
+VidyāMitra is an AI-powered career guidance platform for resume evaluation, skill assessment, mock interviews, and personalized learning paths. 
+
+This scaffold defines a **FastAPI backend** that serves as the **primary interface for the frontend**, with optional n8n workflow integration for complex automation scenarios.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Next.js)                       │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+              ▼             ▼             ▼
+       ┌──────────┐  ┌───────────┐  ┌──────────┐
+       │   API    │  │    n8n    │  │ Supabase │
+       │  Server  │  │ Workflows │  │   (DB)   │
+       └────┬─────┘  └─────┬─────┘  └──────────┘
+            │              │
+            ▼              ▼
+       ┌──────────┐  ┌───────────┐
+       │  GitHub  │  │ OpenRouter│
+       │  Models  │  │    LLM    │
+       └──────────┘  └───────────┘
+```
 
 ### Key Design Principles
-- **RESTful API endpoints** compatible with n8n HTTP Request nodes
-- **Webhook triggers** for n8n workflow initiation
-- **Modular microservices** for parallel processing
-- **Event-driven architecture** for async job handling
+- **API Server is primary** - Frontend calls API directly
+- **n8n is self-contained** - Workflows call OpenRouter LLM directly (not through API)
+- **Shared request/response formats** - API and n8n endpoints accept same payloads
+- **No auth on webhook endpoints** - Enables direct frontend calls
 
 ---
 
@@ -19,83 +43,62 @@ VidyāMitra is an AI-powered career guidance platform for resume evaluation, ski
 
 ```
 backend/
-├── main.py                # FastAPI app
-├── config.py              # Env config
-├── auth.py                # Clerk JWT verify
-├── llm.py                 # GitHub Models client
-├── db.py                  # Supabase client
-├── gdrive.py              # Google Drive (optional)
-├── routes/
-│   ├── resume.py          # Resume endpoints
-│   ├── interview.py       # Interview endpoints
-│   ├── learning.py        # Learning plan endpoints
-│   └── webhooks.py        # n8n webhooks
-├── requirements.txt
-├── .env
-└── Dockerfile
+├── api/                       # FastAPI server (uses GitHub Models)
+│   ├── main.py                # App entry
+│   ├── config.py              # Env config  
+│   ├── auth.py                # Clerk JWT verify
+│   ├── llm.py                 # GitHub Models client
+│   ├── db.py                  # Supabase client
+│   ├── job_market.py          # Market research data
+│   ├── routes/
+│   │   ├── webhooks.py        # AI endpoints (no auth)
+│   │   ├── resume.py          # Resume (auth required)
+│   │   ├── interview.py       # Interview (auth required)
+│   │   ├── quiz.py            # Quiz (auth required)
+│   │   ├── jobs.py            # Job recommendations
+│   │   └── learning.py        # Learning plans
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+└── n8n-workflows/             # Self-contained n8n flows (uses OpenRouter)
+    ├── N8N.md                 # Integration guide
+    ├── 1. Resume Analyzer.json
+    ├── 2. Resume Enhancer.json
+    ├── 3. Resume Generator.json
+    ├── 4. Interview Starter.json
+    ├── 5. Interview Evaluator.json
+    ├── 7. Quiz Generator.json
+    └── 8. Learning Path Generator.json
 ```
 
 ---
 
-## 🔌 n8n Webhooks
+## 🔌 Webhook Endpoints
+
+Both API server and n8n workflows expose compatible webhook endpoints:
+
+| Feature | API Server | n8n Workflow |
+|---------|------------|--------------|
+| Resume Analyze | `/api/webhook/resume/analyze` | `/webhook/resume/analyze` |
+| Resume Enhance | `/api/webhook/resume/enhance` | `/webhook/resume/enhance` |
+| Interview Start | `/api/webhook/interview/start` | `/webhook/interview/start` |
+| Quiz Generate | `/api/webhook/quiz/generate` | `/webhook/quiz/generate` |
+| LLM Provider | GitHub Models | OpenRouter |
+
+### Example: Resume Analysis
 
 ```python
-# routes/webhooks.py
-
-from fastapi import APIRouter
-from pydantic import BaseModel
-
-router = APIRouter(prefix="/webhook", tags=["n8n"])
-
-class N8nPayload(BaseModel):
-    user_id: str
-    data: dict
-
-@router.post("/resume")
-async def n8n_resume(payload: N8nPayload):
-    """n8n triggers this after uploading resume to GDrive"""
-    from llm import analyze_resume
-    from db import supabase
-    
-    analysis = await analyze_resume(payload.data["resume_text"])
-    
-    supabase.table("resumes").insert({
-        "user_id": payload.user_id,
-        "gdrive_file_id": payload.data["file_id"],
-        "analysis": analysis
-    }).execute()
-    
+# API Server endpoint (routes/webhooks.py)
+@router.post("/resume/analyze")
+async def analyze_resume_webhook(payload: N8nPayload, request: Request):
+    """Analyze resume - no auth required"""
+    client = request.state.http_client
+    analysis = await analyze_resume(
+        client,
+        payload.data.get("resume_text", ""),
+        payload.data.get("target_role", "")
+    )
     return {"status": "ok", "analysis": analysis}
-
-@router.post("/interview/evaluate")
-async def n8n_evaluate(payload: N8nPayload):
-    """n8n triggers this to evaluate an answer"""
-    from llm import evaluate_answer
-    
-    evaluation = await evaluate_answer(
-        payload.data["question"],
-        payload.data["answer"]
-    )
-    return {"evaluation": evaluation}
-
-@router.get("/jobs/{job_id}")
-async def job_status(job_id: str):
-    """Poll job status"""
-    from db import supabase
-    job = supabase.table("jobs").select("*").eq("id", job_id).single().execute()
-    return job.data
-
-@router.post("/resume/generate")
-async def generate_resume_endpoint(payload: N8nPayload):
-    """Generate professional resume from structured data"""
-    from llm import generate_resume
-    
-    resume_md = await generate_resume(
-        data=payload.data,
-        target_role=payload.data.get("target_role", "")
-    )
-    
-    return {"status": "ok", "resume": resume_md, "format": "markdown"}
 ```
 
 ---
@@ -433,22 +436,36 @@ POST /api/resume/generate
 
 ---
 
-## 📡 n8n Workflow Examples
+## 📡 n8n Workflows (Self-Contained)
 
-### Resume Flow
+The n8n workflows handle LLM calls directly via OpenRouter. See [n8n-workflows/N8N.md](backend/n8n-workflows/N8N.md) for full details.
+
+### Available Workflows
+
+| Workflow | Webhook Path | LLM Model |
+|----------|--------------|-----------|
+| 1. Resume Analyzer | `/webhook/resume/analyze` | openai/gpt-oss-120b |
+| 2. Resume Enhancer | `/webhook/resume/enhance` | openai/gpt-oss-120b |
+| 3. Resume Generator | `/webhook/resume/generate` | openai/gpt-oss-120b |
+| 4. Interview Starter | `/webhook/interview/start` | openai/gpt-oss-120b |
+| 5. Interview Evaluator | `/webhook/interview/evaluate` | openai/gpt-oss-120b |
+| 7. Quiz Generator | `/webhook/quiz/generate` | openai/gpt-oss-120b |
+| 8. Learning Path | `/webhook/learning/generate` | openai/gpt-oss-120b |
+
+### Workflow Architecture
+
 ```
-[Form Upload] → [GDrive: Upload] → [HTTP: POST /webhook/resume] → [Notify User]
+Frontend → n8n Webhook → LangChain LLM Node → JSON Parser → Response
+                              │
+                              ▼
+                         OpenRouter API
 ```
 
-### Interview Flow
-```
-[Start] → [HTTP: POST /api/interview/start] → [Loop: answer questions] → [HTTP: complete] → [Report]
-```
-
-### Learning Plan Flow
-```
-[Skill Gaps from Resume] → [HTTP: POST /api/learning/plan] → [Store] → [Notify]
-```
+Each workflow:
+1. Receives POST with `{user_id, data: {...}}`
+2. Passes to LangChain LLM node with prompt template
+3. Parses JSON from LLM response
+4. Returns structured response
 
 ---
 

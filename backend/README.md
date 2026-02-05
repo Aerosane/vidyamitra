@@ -1,31 +1,63 @@
 # VidyaMitra Backend
 
-AI-powered career guidance API with n8n workflow integration.
+AI-powered career guidance API with optional n8n workflow integration.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Next.js)                       │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+              ▼             ▼             ▼
+       ┌──────────┐  ┌───────────┐  ┌──────────┐
+       │   API    │  │    n8n    │  │ Supabase │
+       │  Server  │  │ Workflows │  │   (DB)   │
+       └────┬─────┘  └─────┬─────┘  └──────────┘
+            │              │
+            ▼              ▼
+       ┌──────────┐  ┌───────────┐
+       │  GitHub  │  │ OpenRouter│
+       │  Models  │  │    LLM    │
+       └──────────┘  └───────────┘
+```
+
+**Frontend → API Server**: Primary path for authenticated operations, market data, job recommendations.
+
+**Frontend → n8n**: Alternative path for AI features (resume analysis, interviews). n8n handles LLM calls directly via OpenRouter.
+
+**API Server** can operate standalone OR alongside n8n workflows.
 
 ## Structure
 
 ```
 backend/
-├── api/                 # FastAPI server
-│   ├── routes/          # API endpoints
-│   │   ├── webhooks.py  # n8n webhook endpoints (no auth)
-│   │   ├── resume.py    # Resume analysis/generation
-│   │   ├── interview.py # Mock interviews
-│   │   ├── quiz.py      # Skill assessments
-│   │   ├── jobs.py      # Job recommendations & market data
-│   │   └── learning.py  # Learning plans
-│   ├── main.py          # FastAPI app entry
-│   ├── llm.py           # GitHub Models LLM client
-│   ├── auth.py          # Clerk JWT verification
-│   ├── db.py            # Supabase client
-│   ├── config.py        # Environment settings
-│   ├── job_market.py    # 2025-2030 market research data
+├── api/                   # FastAPI server (PRIMARY)
+│   ├── routes/
+│   │   ├── webhooks.py    # Webhook endpoints (same format as n8n)
+│   │   ├── resume.py      # Resume analysis/generation
+│   │   ├── interview.py   # Mock interviews
+│   │   ├── quiz.py        # Skill assessments  
+│   │   ├── jobs.py        # Job recommendations & market data
+│   │   └── learning.py    # Learning plans
+│   ├── main.py            # FastAPI app entry
+│   ├── llm.py             # GitHub Models LLM client
+│   ├── auth.py            # Clerk JWT verification
+│   ├── db.py              # Supabase client
+│   ├── config.py          # Environment settings
+│   ├── job_market.py      # 2025-2030 market research data
 │   └── requirements.txt
 │
-└── n8n_workflows/       # n8n flow templates
-    ├── resume_flow.json
-    ├── interview_flow.json
-    └── voice_flow.json
+└── n8n-workflows/         # n8n workflow templates (OPTIONAL)
+    ├── 1. Resume Analyzer.json
+    ├── 2. Resume Enhancer.json
+    ├── 3. Resume Generator.json
+    ├── 4. Interview Starter.json
+    ├── 5. Interview Evaluator.json
+    ├── 7. Quiz Generator.json
+    └── 8. Learning Path Generator.json
 ```
 
 ## Quick Start
@@ -82,33 +114,46 @@ See [ENDPOINTS.md](../ENDPOINTS.md) for full API documentation.
 | `POST /api/webhook/jobs/recommend` | Get job recommendations |
 | `GET /api/jobs/market/skills` | Get in-demand skills |
 
-### Webhook vs Authenticated Endpoints
+### Endpoint Types
 
-- `/api/webhook/*` - No auth required, designed for n8n
-- `/api/resume/*`, `/api/interview/*`, etc. - Require Clerk JWT
+| Type | Auth | Usage |
+|------|------|-------|
+| `/api/webhook/*` | None | AI features - usable by frontend OR n8n |
+| `/api/resume/*`, `/api/interview/*` | Clerk JWT | User-facing authenticated endpoints |
+| `/api/jobs/market/*` | None | Public market data |
 
-## n8n Integration
+### Frontend Integration
 
-Import workflow templates from `n8n_workflows/` into your n8n instance:
+Frontend can call API endpoints directly:
 
-1. Open n8n → Workflows → Import
-2. Select JSON file
-3. Update webhook URLs to point to your API
-
-### Workflow Architecture
-
+```typescript
+// Example: Direct API call from Next.js
+const response = await fetch(`${API_URL}/api/webhook/resume/analyze`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    user_id: userId,
+    data: { resume_text: text, target_role: role }
+  })
+});
 ```
-┌─────────┐     ┌─────────┐     ┌─────────────┐     ┌──────────┐
-│ Frontend│ ──► │   n8n   │ ──► │ VidyaMitra  │ ──► │  GitHub  │
-│         │ ◄── │         │ ◄── │     API     │ ◄── │  Models  │
-└─────────┘     └─────────┘     └─────────────┘     └──────────┘
-                     │
-                     ▼
-               ┌──────────┐
-               │  Google  │
-               │  Drive   │
-               └──────────┘
-```
+
+## n8n Integration (Optional)
+
+n8n workflows provide an alternative AI processing path. See [n8n-workflows/N8N.md](n8n-workflows/N8N.md) for details.
+
+**Important:** n8n workflows are **self-contained** - they call OpenRouter LLM directly, not through this API server. Both paths produce compatible responses.
+
+**When to use n8n:**
+- Complex multi-step pipelines
+- File processing (Google Drive integration)
+- Custom LLM providers (OpenRouter)
+- Workflow automation with triggers
+
+**When to use API directly:**
+- Simple request/response
+- Lower latency requirements
+- Direct frontend integration
 
 ## LLM Configuration
 
