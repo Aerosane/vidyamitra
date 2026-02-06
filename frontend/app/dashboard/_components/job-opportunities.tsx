@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 
 export default function JobOpportunitiesSection() {
     const handleJobOpportunitiesClick = useCallback(() => {
-        window.location.href = 'https://www.naukri.com/nlogin/login?utm_source=google&utm_medium=cpc&utm_campaign=Brand&gclsrc=aw.ds&gad_source=1&gad_campaignid=19863995494&gbraid=0AAAAADLp3cHQfND7JICwSWl7ABrZEFpKS&gclid=CjwKCAiA1obMBhAbEiwAsUBbImgMOIAkykiuV2OkABrwfUqdzb4yUI8Jkj-ZBPA3kZs2MsUFmEgKiRoCHtEQAvD_BwE';
+        window.open('https://www.naukri.com/nlogin/login?utm_source=google&utm_medium=cpc&utm_campaign=Brand&gclsrc=aw.ds&gad_source=1&gad_campaignid=19863995494&gbraid=0AAAAADLp3cHQfND7JICwSWl7ABrZEFpKS&gclid=CjwKCAiA1obMBhAbEiwAsUBbImgMOIAkykiuV2OkABrwfUqdzb4yUI8Jkj-ZBPA3kZs2MsUFmEgKiRoCHtEQAvD_BwE', '_blank');
     }, []);
 
     return (
@@ -59,10 +59,10 @@ export default function JobOpportunitiesSection() {
 
                 <button
                     onClick={handleJobOpportunitiesClick}
-                    className="w-full mt-6 py-4 px-6 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-3"
+                    className="w-full mt-6 py-4 px-6 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-3 cursor-pointer"
                     aria-label="Explore more job opportunities"
                 >
-                    <Briefcase className="w-5 h-5" aria-hidden="true" />
+                    <Briefcase className="w-5 h-5" aria-hidden="true " />
                     Explore More Job Opportunities
                 </button>
             </div>
