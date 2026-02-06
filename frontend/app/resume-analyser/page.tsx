@@ -61,7 +61,7 @@ function ResumeAnalyser() {
     target_role: ''
   });
 
-  const API_BASE_URL = 'http://localhost:8000/api/webhook/resume';
+  const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/webhook/resume`;
 
   // Copy to clipboard function with fallback
   const handleCopyToClipboard = async () => {

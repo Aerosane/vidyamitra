@@ -105,10 +105,10 @@ export default function DashboardPage() {
         const fetchDashboardData = async () => {
             setLoading(true);
             try {
-                const statsResponse = await fetch('http://localhost:8000/dashboard-data', {
-                    method: 'POST',
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                const statsResponse = await fetch(`${apiUrl}/api/dashboard/stats?user_id=${encodeURIComponent(username)}`, {
+                    method: 'GET',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email }),
                     signal: controller.signal,
                 });
 

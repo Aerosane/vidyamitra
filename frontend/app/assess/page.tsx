@@ -16,7 +16,7 @@ function SkillQuiz() {
   const [evaluation, setEvaluation] = useState(null);
   const [evaluating, setEvaluating] = useState(false);
 
-  const FAST_API_URL = 'http://localhost:8000';
+  const FAST_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // Get username from Clerk
   const getUserId = () => {

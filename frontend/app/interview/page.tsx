@@ -29,7 +29,7 @@ function MockInterview() {
 
   const recognitionRef = useRef(null);
   const speechSynthesisRef = useRef(null);
-  const FAST_API_URL = 'http://localhost:8000';
+  const FAST_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   // Initialize speech recognition and synthesis
   useEffect(() => {
