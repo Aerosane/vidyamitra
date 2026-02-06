@@ -228,15 +228,23 @@ async def n8n_evaluate_quiz(payload: N8nPayload):
     questions = payload.data.get("questions", [])
     answers = payload.data.get("answers", [])
     skill = payload.data.get("skill", "")
+    difficulty = payload.data.get("difficulty", "intermediate")
     
     result = llm.evaluate_quiz(questions, answers)
+    
+    # Add answers and result to questions for storage
+    questions_with_answers = []
+    for i, q in enumerate(questions):
+        q_copy = dict(q)
+        q_copy["user_answer"] = answers[i] if i < len(answers) else None
+        q_copy["evaluation"] = result.get("evaluations", [{}])[i] if i < len(result.get("evaluations", [])) else {}
+        questions_with_answers.append(q_copy)
     
     saved = await db.save_quiz(
         user_id=payload.user_id,
         skill=skill,
-        questions=questions,
-        answers=answers,
-        result_data=result
+        difficulty=difficulty,
+        questions=questions_with_answers
     )
     
     return {"status": "ok", "result": result, "quiz_id": saved.get("id") if saved else None}
