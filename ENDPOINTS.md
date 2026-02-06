@@ -31,6 +31,37 @@ Check if API is running.
 
 ---
 
+## Dashboard Endpoints
+
+### `GET /api/dashboard/stats`
+Get user dashboard statistics.
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `user_id` | string | Clerk user ID (username or clerk_id) |
+
+**Request:**
+```
+GET /api/dashboard/stats?user_id=user_test
+```
+
+**Response:**
+```json
+{
+  "stats": {
+    "skills_assessed": 3,
+    "achievements": 5,
+    "profile_score": 78,
+    "streak_days": 0,
+    "interviews_completed": 2,
+    "resumes_analyzed": 1
+  }
+}
+```
+
+---
+
 ## Resume Endpoints
 
 ### `POST /api/webhook/resume/analyze`
