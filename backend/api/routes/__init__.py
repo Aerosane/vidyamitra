@@ -8,6 +8,7 @@ from routes.interview import router as interview_router
 from routes.learning import router as learning_router
 from routes.quiz import router as quiz_router
 from routes.jobs import router as jobs_router
+from routes.dashboard import router as dashboard_router
 
 # Create main API router
 api_router = APIRouter()
@@ -19,5 +20,6 @@ api_router.include_router(interview_router)
 api_router.include_router(learning_router)
 api_router.include_router(quiz_router)
 api_router.include_router(jobs_router)
+api_router.include_router(dashboard_router)
 
 __all__ = ["api_router"]
