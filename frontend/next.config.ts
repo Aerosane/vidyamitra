@@ -37,6 +37,15 @@ const nextConfig = {
     
     // Restore scroll position on navigation
     scrollRestoration: true,
+    
+    // Allow Server Actions from Codespaces forwarded host
+    serverActions: {
+      allowedOrigins: [
+        'localhost:3000',
+        '*.app.github.dev',
+        'urban-umbrella-q6xr69jv6wxc4w59-3000.app.github.dev',
+      ],
+    },
   },
   
   // Enable compression
