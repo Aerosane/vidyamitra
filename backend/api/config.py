@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # Google Drive (optional - handled by n8n)
     GDRIVE_FOLDER_ID: str = ""
     
+    # n8n Integration
+    N8N_WEBHOOK_URL: str = "http://localhost:5678/webhook"
+    USE_N8N: bool = True  # Toggle to use n8n or direct GitHub Models
+    
     # App settings
     DEBUG: bool = False
     API_PREFIX: str = "/api"

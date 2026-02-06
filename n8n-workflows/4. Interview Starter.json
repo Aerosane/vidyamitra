@@ -1,0 +1,154 @@
+{
+  "name": "4. Interview Starter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "interview/start",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        -112
+      ],
+      "id": "8b6fbeed-d24a-4769-8c09-50c512dc3a4a",
+      "name": "Webhook",
+      "webhookId": "cec3ab91-ccc0-4d5d-9c7e-3f63aabf757d"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Technical Interviewer.\nGenerate 5 technical interview questions for a candidate.\n\nRole: {{ $json.body.data.role }}\nDomain: {{ $json.body.data.domain }}\nDifficulty: {{ $json.body.data.difficulty }}\n\nReturn a STRICT JSON object with a \"questions\" array.\nEach question must have:\n- id (number 1-5)\n- text (The question string)\n- topic (e.g., \"Databases\", \"System Design\")\n- key_concepts (Array of strings: what the answer should cover)\n\nExample Structure:\n{\n  \"questions\": [\n    { \"id\": 1, \"text\": \"Explain the GIL in Python.\", \"topic\": \"Python Internals\", \"key_concepts\": [\"Thread safety\", \"Memory management\"] }\n  ]\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "="
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        160,
+        -112
+      ],
+      "id": "2f8a85b0-c6e0-4c17-be84-fb81538488b9",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        160,
+        64
+      ],
+      "id": "cd32c9d0-bbed-4464-9136-8252eb74545c",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1 || jsonEnd === -1) throw new Error(\"No JSON found\");\n\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  // Add a Session ID (Frontend needs this to track the interview)\n  const sessionId = \"session_\" + Math.random().toString(36).substring(2, 9);\n\n  return {\n    \"status\": \"ok\",\n    \"session_id\": sessionId,\n    \"questions\": result.questions\n  };\n\n} catch (error) {\n  return { \"status\": \"error\", \"message\": \"Failed to generate questions\" };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -112
+      ],
+      "id": "21881bb5-00db-4b17-980d-da4dc8fa9e0e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        720,
+        -112
+      ],
+      "id": "a1f80120-426d-484c-b4ca-9e07ceee0300",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8f955d74-7424-4977-9983-b0abbaaadd49",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "-l1WU9dQ1Gjl1jAwJgV20",
+  "tags": []
+}

@@ -44,7 +44,7 @@ function FloatingChatbot() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const GROQ_API_KEY = '';//api key
+    const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -1,0 +1,147 @@
+{
+  "name": "6. Voice Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice/process",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -80
+      ],
+      "id": "2a66bae3-e7f0-4aea-b546-55e80f847b3d",
+      "name": "Webhook",
+      "webhookId": "5cea8775-2229-4fe5-9ca9-155e25fb1532"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Friendly but Professional Technical Interviewer.\nYou are conducting a voice interview.\n\nCurrent Question: {{ $json.body.data.current_question }}\nCandidate's Answer (Transcript): {{ $json.body.data.transcript }}\n\nTask:\n1. Evaluate the answer based on technical accuracy and clarity.\n2. Generate a \"response_text\": This is what you will SPEAK back. It should start with brief feedback/acknowledgment, followed immediately by the NEXT question.\n3. Decide if the interview is complete (e.g., if the user says \"stop\" or \"goodbye\"). Default to false.\n\nReturn a STRICT JSON object with this EXACT schema:\n{\n  \"evaluation\": {\n    \"score\": (Integer 0-100),\n    \"grade\": \"(String: A, B, C, D, F)\",\n    \"feedback\": \"(String: 1 sentence summary)\",\n    \"strengths\": [\"(String)\", \"(String)\"],\n    \"improvements\": [\"(String)\", \"(String)\"]\n  },\n  \"response_text\": \"(String: Conversational response + Next Question)\",\n  \"is_complete\": (Boolean)\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -144,
+        -96
+      ],
+      "id": "9961f5cc-de36-463a-951b-ec18421a53e8",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        144
+      ],
+      "id": "d5c220f8-7e19-477f-bee1-fee1cde75f33",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1) throw new Error(\"No JSON found\");\n\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  return {\n    \"status\": \"ok\",\n    \"evaluation\": result.evaluation,\n    \"response_text\": result.response_text,\n    \"is_complete\": result.is_complete\n  };\n\n} catch (error) {\n  return { \n    \"status\": \"error\", \n    \"message\": \"Failed to process voice response\",\n    \"response_text\": \"I'm sorry, I didn't catch that. Could you repeat?\",\n    \"is_complete\": false\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -96
+      ],
+      "id": "9f17cf62-8809-47bf-a69d-a9dd55c74bc8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        368,
+        -80
+      ],
+      "id": "6bf673f4-72b7-4c3c-8213-80e727958196",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "27428722-cc60-445c-91db-cb9c94e2b6af",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "s3GqRNCpqtzd1IUtfRBGd",
+  "tags": []
+}

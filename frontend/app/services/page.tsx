@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { FileText, GraduationCap, TrendingUp, Briefcase, CheckCircle, Sparkles } from 'lucide-react';
 
 export default function ServicesPage() {
@@ -13,6 +14,7 @@ export default function ServicesPage() {
       title: "AI Resume Evaluator",
       description: "Get comprehensive AI-powered analysis of your resume with actionable insights to improve your job application success.",
       color: "from-purple-500 to-pink-500",
+      href: "/resume-analyser",
       features: [
         "Instant resume analysis and scoring",
         "ATS compatibility checking",
@@ -23,15 +25,16 @@ export default function ServicesPage() {
     },
     {
       icon: <GraduationCap className="w-10 h-10" />,
-      title: "Personalized Training",
-      description: "Access tailored learning paths designed to help you master the skills needed for your dream career.",
+      title: "Skill Assessment",
+      description: "Test your knowledge with AI-generated quizzes tailored to your skill level and get detailed feedback.",
       color: "from-blue-500 to-cyan-500",
+      href: "/assess",
       features: [
-        "Customized learning roadmaps",
-        "Interactive course materials",
-        "Skill gap analysis",
-        "Progress tracking and milestones",
-        "Expert-curated content"
+        "Customized skill quizzes",
+        "Multiple difficulty levels",
+        "Instant AI evaluation",
+        "Progress tracking",
+        "Detailed explanations"
       ]
     },
     {
@@ -39,12 +42,13 @@ export default function ServicesPage() {
       title: "Career Path Planner",
       description: "Visualize and plan your career trajectory with AI-powered insights tailored to your goals and market trends.",
       color: "from-green-500 to-emerald-500",
+      href: "/plan",
       features: [
         "Personalized career roadmaps",
         "Market trend analysis",
         "Salary expectations and growth",
         "Skills required for advancement",
-        "Alternative career path suggestions"
+        "Job recommendations"
       ]
     },
     {
@@ -52,14 +56,15 @@ export default function ServicesPage() {
       title: "Interview Preparation",
       description: "Practice and perfect your interview skills with AI-driven mock interviews and real-time feedback.",
       color: "from-orange-500 to-red-500",
+      href: "/interview",
       features: [
         "AI-powered mock interviews",
         "Real-time response feedback",
-        "Common interview questions database",
-        "Body language and communication tips",
-        "Company-specific preparation"
+        "Domain-specific questions",
+        "Voice mode support",
+        "Detailed performance analysis"
       ]
-    }
+    },
   ], []);
 
   return (
@@ -132,6 +137,14 @@ export default function ServicesPage() {
                   ))}
                 </ul>
               </div>
+
+              {/* CTA Button */}
+              <Link
+                href={service.href}
+                className={`mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all hover:scale-105 bg-gradient-to-r ${service.color} text-white`}
+              >
+                Try Now →
+              </Link>
             </div>
           ))}
         </div>

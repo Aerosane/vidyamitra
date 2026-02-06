@@ -1,0 +1,147 @@
+{
+  "name": "10. Jobs Recommender",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jobs/recommend",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6d34e4f0-45ab-4513-a6ed-568d55cf7a31",
+      "name": "Webhook",
+      "webhookId": "c431378b-ec96-4d92-9831-e8bdc991260e"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a job API. Receive these skills: {{ $json.body.data.skills }} and target role: {{ $json.body.data.target_role }}.\nReturn a JSON object with 2 job recommendations based on this.\nFormat strictly as:\n{\n  \"status\": \"ok\",\n  \"jobs\": [{ \"title\": \"...\", \"match_percent\": 80, \"skills_matched\": [], \"skills_to_learn\": [], \"salary_range_usd\": \"...\", \"growth_outlook\": \"...\" }]\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a5dde6ba-e47f-47b6-8511-b1053a274c8b",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        144,
+        208
+      ],
+      "id": "856b12d0-e546-49b0-9db4-3fce1ddb72aa",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "DlzVuV8Pq5LG1HuO",
+          "name": "OpenRouter account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Safely try to get the text. \n// We check for 'text', 'response', or 'output' just in case the AI node named it differently.\nconst aiOutput = $json.text || $json.response || $json.output || \"\";\n\nif (!aiOutput) {\n  // If empty, return a safe error so the workflow doesn't crash\n  return { json: { status: \"error\", message: \"No text received from AI\" } };\n}\n\n// 2. Clean the markdown\nconst cleanJsonText = aiOutput.replace(/```json/g, '').replace(/```/g, '').trim();\n\n// 3. Parse and Return\ntry {\n  const parsedData = JSON.parse(cleanJsonText);\n  \n  // CRITICAL FIX: n8n requires the data to be returned inside a \"json\" property\n  return { json: parsedData };\n  \n} catch (error) {\n  // If AI returned bad text, show us what it sent so we can debug\n  return { \n    json: { \n      status: \"error\", \n      message: \"AI returned invalid JSON\", \n      raw_output: cleanJsonText \n    } \n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "f281fd4f-440e-4392-985d-c6ccac8ac5be",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        768,
+        0
+      ],
+      "id": "8ec910fc-71cd-4b58-a7eb-53500e800d9e",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2f3447de-5c9b-454b-b081-45aa6bc8c70a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fe91e4775db83e27384b9a332c16d76a95b02a3b8815cc4946a7ea02757bef9c"
+  },
+  "id": "-6H9BTy4rhh5rB7xSPlxz",
+  "tags": []
+}

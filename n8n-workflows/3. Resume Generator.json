@@ -1,0 +1,147 @@
+{
+  "name": "3. Resume Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume/generate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "054a8463-aeb9-437f-ba02-a245116e4e8b",
+      "name": "Webhook",
+      "webhookId": "88943ab9-c5ff-4e7f-a54f-c4b09bff1de0"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Professional Resume Writer.\nTake the following structured data and compile it into a clean, professional Resume using MARKDOWN formatting.\n\nUser Data:\n- Personal Info: {{ $json.body.data.personal_info }}\n- Experience: {{ $json.body.data.experience }}\n- Education: {{ $json.body.data.education }}\n- Skills: {{ $json.body.data.skills }}\n\nFormatting Rules:\n1. Name as H1 (# Name)\n2. Contact info on the next line.\n3. Use \"## Experience\", \"## Education\", \"## Skills\" as section headers.\n4. Fix any grammar mistakes in the \"details\" of experience.\n5. Use bullet points for skills.\n\nIMPORTANT: Return a STRICT JSON object. Do not return just the markdown text.\nUse this schema:\n{\n  \"resume\": \"(String containing the entire markdown resume)\"\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        208,
+        0
+      ],
+      "id": "71b67732-9e71-49fb-ab72-0edbcccb6103",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        176
+      ],
+      "id": "9598be06-23e9-4b68-9ca9-755d221f8dfc",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  // Find the JSON object inside the text\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1 || jsonEnd === -1) {\n    throw new Error(\"No JSON found\");\n  }\n\n  // Parse it\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  return {\n    \"status\": \"ok\",\n    \"resume\": result.resume\n  };\n\n} catch (e) {\n  // Fallback: If AI fails to make JSON, we assume the whole text is the resume\n  return { \n    \"status\": \"ok\", \n    \"resume\": text \n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -64
+      ],
+      "id": "95661dc1-7390-48a9-9bc4-94cde44daee0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        736,
+        -16
+      ],
+      "id": "53fa5126-dac1-47dd-bc9a-4f97139e325e",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6ce2d48c-4d1a-49a8-8527-f5b7d9b36a0b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "bPjyZ9LtJzNUBomcogbIF",
+  "tags": []
+}

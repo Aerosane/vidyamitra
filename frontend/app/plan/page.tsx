@@ -98,9 +98,9 @@ function JobRecommendation() {
         setResult(data);
         setActiveTab('recommendations');
 
-        // Automatically analyze skill gap for the first recommendation
+        // Automatically analyze skill gap for the first recommendation (don't switch tab)
         if (data.jobs && data.jobs.length > 0) {
-          analyzeSkillGap(data.jobs[0].title);
+          analyzeSkillGap(data.jobs[0].title, false);
         }
       } else {
         throw new Error('Failed to get job recommendations');
@@ -157,7 +157,7 @@ function JobRecommendation() {
   };
 
   // Analyze skill gap
-  const analyzeSkillGap = async (role) => {
+  const analyzeSkillGap = async (role, switchTab = true) => {
     if (!skills.trim()) return;
 
     setAnalyzingGap(true);
@@ -189,7 +189,9 @@ function JobRecommendation() {
       if (response.ok) {
         const data = await response.json();
         setSkillGap(data);
-        setActiveTab('skillgap');
+        if (switchTab) {
+          setActiveTab('skillgap');
+        }
       } else {
         throw new Error('Failed to analyze skill gap');
       }
@@ -694,9 +696,14 @@ function JobRecommendation() {
 
                     {/* Apply Button */}
                     <div className="mt-6 pt-6 border-t border-gray-600/50">
-                      <button className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all hover:scale-105">
-                        View Job Details & Apply
-                      </button>
+                      <a 
+                        href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}${location ? `&location=${encodeURIComponent(location)}` : ''}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all hover:scale-105"
+                      >
+                        View Job Details & Apply →
+                      </a>
                     </div>
                   </div>
                 );

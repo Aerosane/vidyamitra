@@ -77,7 +77,7 @@ export default function ContactPage() {
         {/* Contact Form */}
         <div className={`rounded-2xl border p-8 max-w-2xl mx-auto ${isDark ? 'bg-gray-800/50 border-gray-700/50' : 'bg-white border-gray-200 shadow-lg'}`}>
           <h2 className={`text-2xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Send Us a Message</h2>
-          <form className="space-y-6">
+          <form className="space-y-6" action="mailto:support@vidyamitra.ai" method="POST" encType="text/plain">
             <div>
               <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Your Name

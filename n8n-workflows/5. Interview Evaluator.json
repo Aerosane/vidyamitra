@@ -1,0 +1,145 @@
+{
+  "name": "5. Interview Evaluator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "interview/evaluate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        -64
+      ],
+      "id": "394848e6-660c-4395-98da-bb1e8cf65882",
+      "name": "Webhook",
+      "webhookId": "8a9b8302-94ad-4ee8-80e6-f34fb78c2f0f"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Senior Technical Interviewer.\nEvaluate the candidate's answer to the following technical question.\n\nQuestion: {{ $json.body.data.question }}\nCandidate Answer: {{ $json.body.data.user_answer }}\nDomain: {{ $json.body.data.domain }}\n\nCriteria:\n- Check for technical accuracy.\n- Check for depth and clarity.\n\nReturn a STRICT JSON object:\n{\n  \"score\": (integer 1-10),\n  \"feedback\": \"(String: 1-2 sentences on what was good/bad)\",\n  \"is_correct\": (boolean),\n  \"ideal_answer\": \"(String: A concise, perfect summary of the answer)\"\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -112,
+        -64
+      ],
+      "id": "0ec8e1ce-dda2-491b-b35b-c55d57d52c39",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        144
+      ],
+      "id": "46a9d9b5-0fe9-46d0-afd6-927f08ecb699",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1) throw new Error(\"No JSON found\");\n\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  return {\n    \"status\": \"ok\",\n    \"evaluation\": result\n  };\n\n} catch (error) {\n  return { \n    \"status\": \"error\", \n    \"message\": \"Evaluation failed\" \n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -64
+      ],
+      "id": "b2686737-a6de-4923-80c3-47336b0d07fd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        -64
+      ],
+      "id": "72a5b1d1-0f4a-4c34-b6f1-e3e75349dbbb",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9439829f-afce-4aec-964c-81e8a03c72ff",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "7W2TAngqVJwKXL1u64lao",
+  "tags": []
+}

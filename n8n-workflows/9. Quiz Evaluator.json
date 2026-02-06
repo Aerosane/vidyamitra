@@ -1,0 +1,147 @@
+{
+  "name": "9. Quiz Evaluator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quiz/evaluate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -288,
+        -48
+      ],
+      "id": "f1fe7d8a-59fc-4a8e-b4c1-ce84136949a8",
+      "name": "Webhook",
+      "webhookId": "4f1b26ea-adcc-4019-ab31-6223a47bcbb4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Strict Quiz Grader.\nGrade the following quiz responses:\n{{ JSON.stringify($json.body.data.responses) }}\n\nGrading Rules:\n1. Compare \"user_answer\" with \"correct_answer\".\n2. Passing score is 70%.\n3. Provide a brief explanation for the correct answer.\n\nReturn a STRICT JSON object with this EXACT schema:\n{\n  \"score\": (Integer 0-100),\n  \"correct\": (Integer count of correct answers),\n  \"total\": (Integer count of total questions),\n  \"passed\": (Boolean),\n  \"feedback\": \"(String: 'Great job!' or 'Needs improvement')\",\n  \"details\": [\n    {\n      \"question\": (Integer ID),\n      \"correct\": (Boolean),\n      \"your_answer\": \"(String: e.g., 'A')\",\n      \"correct_answer\": \"(String: e.g., 'B')\",\n      \"explanation\": \"(String: Why the correct answer is correct)\"\n    }\n  ]\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -64,
+        -48
+      ],
+      "id": "0ade4ad4-2ac6-4524-b2f9-f9b9543e7b92",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        144
+      ],
+      "id": "e685fd13-4b19-4282-b6b0-fe5a7dc72800",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  const jsonStart = text.indexOf('{');\n  const jsonEnd = text.lastIndexOf('}');\n\n  if (jsonStart === -1) throw new Error(\"No JSON found\");\n\n  const result = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  return {\n    \"status\": \"ok\",\n    \"evaluation\": result\n  };\n\n} catch (error) {\n  return { \n    \"status\": \"error\", \n    \"message\": \"Failed to evaluate quiz\" \n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -48
+      ],
+      "id": "1161674b-94e0-4d4a-848e-2b7a7d0d1c91",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        496,
+        -48
+      ],
+      "id": "a3e1b349-e219-449a-bdf3-0264d1f45993",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "63b7cc8d-62f0-4bee-8542-1a7e1a526ba2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "Tsb1kvXYxPCMobQL_BL8m",
+  "tags": []
+}

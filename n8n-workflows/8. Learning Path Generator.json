@@ -1,0 +1,147 @@
+{
+  "name": "8. Learning Path Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "learning/generate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -96
+      ],
+      "id": "9e37da75-cb73-4aff-b918-7ba06050d0b3",
+      "name": "Webhook",
+      "webhookId": "0358bc9f-5a1b-49cb-8b67-0c08a9c83992"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an Expert Technical Career Coach.\nCreate a prioritized learning path for a user targeting the role of: {{ $json.body.data.target_role }}\n\nThey have the following skill gaps:\n{{ $json.body.data.gaps }}\n\nFor EACH gap, suggest:\n1. A Priority (High/Medium/Low)\n2. Two specific learning resources (Courses, Docs, or Tutorials).\n\nReturn a STRICT JSON array of objects. Use this exact schema:\n[\n  {\n    \"skill\": \"Name of skill (e.g. AWS)\",\n    \"priority\": \"high\",\n    \"resources\": [\n      {\n        \"title\": \"Exact Course Name\",\n        \"type\": \"course\" (or \"documentation\" or \"project\"),\n        \"platform\": \"Udemy\" (or \"Coursera\", \"YouTube\", \"Official Docs\")\n      }\n    ]\n  }\n]\n\nIMPORTANT: Return ONLY the JSON array. Do not wrap in markdown.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -144,
+        -128
+      ],
+      "id": "08a811ec-205f-4ae3-98f3-42ef9350befb",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        144
+      ],
+      "id": "d129b99e-aba5-4a3f-9751-8b807bbbd9dc",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kbLUbBg7LTgDm2VN",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get AI Text\nconst text = $input.first().json.text || $input.first().json.output || \"\";\n\ntry {\n  // 2. Extract JSON Array\n  const jsonStart = text.indexOf('[');\n  const jsonEnd = text.lastIndexOf(']');\n\n  if (jsonStart === -1 || jsonEnd === -1) {\n    throw new Error(\"AI did not return a valid array\");\n  }\n\n  const planArray = JSON.parse(text.substring(jsonStart, jsonEnd + 1));\n\n  // 3. Generate a random Plan ID (Simulating a DB ID)\n  const planId = \"plan_\" + Math.random().toString(36).substring(2, 9);\n\n  // 4. Return the Final API Structure\n  return {\n    \"status\": \"ok\",\n    \"plan_id\": planId,\n    \"plan\": planArray\n  };\n\n} catch (error) {\n  return { \n    \"status\": \"error\", \n    \"message\": \"Failed to generate plan. Please try again.\",\n    \"debug\": error.message\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        64
+      ],
+      "id": "19515642-bf8a-44b6-8176-30fb6ada1d4f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        256,
+        -96
+      ],
+      "id": "5192d76c-08c6-4a1a-a44f-b9e31c57c6db",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "323db52c-2590-4e5f-825e-6b39419a7339",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a2609b8acbd96bd31c6edb3026eabbf6906330a7f428976eb3768ed53d55a2a"
+  },
+  "id": "PVmXuywV4fob4OGWXhSs4",
+  "tags": []
+}
