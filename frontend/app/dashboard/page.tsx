@@ -200,10 +200,10 @@ export default function DashboardPage() {
 
     // Quick actions with useCallback for stable references
     const quickActions = useMemo(() => [
-        { icon: <Brain className="w-6 h-6" />, label: "Quiz", color: "from-purple-500 to-indigo-500", link: "/assess" },
-        { icon: <TrendingUp className="w-6 h-6" />, label: "Job Opportunities", color: "from-cyan-500 to-teal-500", link: "/plan" },
-        { icon: <Briefcase className="w-6 h-6" />, label: "Mock Interview", color: "from-yellow-500 to-orange-500", link: "/interview" },
-        { icon: <Sparkles className="w-6 h-6" />, label: "Resume Analyser", color: "from-pink-500 to-rose-500", link: "/resume-analyser" }
+        { icon: <Brain className="w-6 h-6 cursor-pointer" />, label: "Quiz", color: "from-purple-500 to-indigo-500", link: "/assess" },
+        { icon: <TrendingUp className="w-6 h-6 cursor-pointer" />, label: "Job Opportunities", color: "from-cyan-500 to-teal-500", link: "/plan" },
+        { icon: <Briefcase className="w-6 h-6 cursor-pointer" />, label: "Mock Interview", color: "from-yellow-500 to-orange-500", link: "/interview" },
+        { icon: <Sparkles className="w-6 h-6 cursor-pointer" />, label: "Resume Analyser", color: "from-pink-500 to-rose-500", link: "/resume-analyser" }
     ], []);
 
     // Memoized navigation handlers
