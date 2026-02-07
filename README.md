@@ -1,115 +1,62 @@
 # VidyaMitra
 
-AI-powered career guidance platform (frontend + API + optional n8n workflows).
+AI-powered career guidance platform that helps users analyze resumes, enhance their profiles, practice interviews, and discover job opportunities through intelligent recommendations.
 
-## Overview
+## What This Project Does
 
-VidyaMitra provides resume analysis, resume enhancement/generation, mock interviews, quizzes, and job-market recommendations. The repo contains a Next.js frontend, a FastAPI backend optimized for small VPS instances, and a set of optional n8n workflow templates for multi-step automation.
+VidyaMitra provides five core features:
+
+1. **Resume Analysis** — Parse and score uploaded resumes; extract skills, experience, and education; identify gaps and strengths.
+2. **Resume Enhancement & Generation** — Rewrite or expand resume sections (summary, skills, achievements) tailored to target roles using LLM-powered suggestions.
+3. **Mock Interviews** — Generate role-specific interview questions and evaluate candidate answers with constructive feedback.
+4. **Quizzes & Assessments** — Create skill-based quizzes to validate knowledge areas and pinpoint learning gaps.
+5. **Job-Market Recommendations** — Suggest relevant roles, in-demand keywords, and personalized improvement paths based on user profile and market trends.
+
+## How It Works
+
+- **Frontend** (Next.js) — Interactive UI for uploading resumes, viewing analyses, conducting mock interviews, and exploring recommendations.
+- **Backend API** (FastAPI) — Processes resumes, orchestrates LLM calls (via GitHub Models, OpenRouter, or similar), and returns actionable insights.
+- **Optional Automation** (n8n workflows) — Multi-step workflows for complex pipelines (e.g., fetching job listings, emailing summaries, integrating with Google Drive).
 
 ## Repository Layout
 
-- `backend/` — FastAPI backend, LLM integration, DB helpers, and n8n workflow templates.
-	- `backend/api/` — primary API server (entry: `main.py`).
-	- `backend/n8n-workflows/` — n8n JSON workflow templates.
-- `frontend/` — Next.js app (app directory, API routes, components).
-- `ENDPOINTS.md` — API endpoint reference used by frontend and workflows.
+- `backend/api/` — FastAPI server with LLM integrations, resume parsing, and analysis logic. Entry point: `main.py`
+- `backend/n8n-workflows/` — Optional n8n JSON workflow templates for advanced automation.
+- `frontend/` — Next.js application with pages, components, and client-side logic.
+- `ENDPOINTS.md` — Full API endpoint reference.
 
-## Quickstart
+## Getting Started
 
-Prerequisites:
-- Python 3.11+ (recommended)
-- Node.js 18+ and a package manager (`pnpm`/`npm`/`yarn`) for the frontend
-- Optionally Docker for containerized runs
+### Prerequisites
 
-### Backend (local)
+- Python 3.12+
+- Node.js 24+ with `pnpm`, `npm`, or `yarn`
+- GitHub account with a Personal Access Token (for LLM access via GitHub Models)
 
-1. Open a terminal and change into the API folder:
+## Key Features of the Implementation
 
-```bash
-cd backend/api
-```
-
-2. Create and activate a virtual environment, then install dependencies:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-3. Copy example environment and set required vars:
-
-```bash
-cp .env.example .env
-# Edit .env to add GITHUB_TOKEN and any optional keys (SUPABASE, CLERK, etc.)
-```
-
-Required environment variables:
-
-- `GITHUB_TOKEN` — GitHub PAT for GitHub Models access (models:read scope)
-
-Optional:
-
-- `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` — if using Supabase
-- `CLERK_SECRET_KEY` — for authenticated endpoints
-
-4. Start the server (development):
-
-```bash
-python main.py
-# Or: ./run.sh (production wrapper)
-```
-
-The API listens on port `8000` by default. Open `http://localhost:8000/docs` when `DEBUG` is enabled to view the OpenAPI docs.
-
-### Frontend (local)
-
-1. From repo root:
-
-```bash
-cd frontend
-```
-
-2. Install dependencies and run:
-
-```bash
-pnpm install   # or npm install
-pnpm dev       # or npm run dev
-```
-
-The frontend runs on `http://localhost:3000`.
-
-### Optional: Docker (backend)
-
-```bash
-cd backend/api
-docker build -t vidyamitra-api .
-docker run -p 8000:8000 --env-file .env vidyamitra-api
-```
-
-## n8n Workflows
-
-Pre-built workflow templates live in `backend/n8n-workflows/` and `frontend/n8n-workflows/`. These workflows are optional and call LLM providers (OpenRouter) directly; they are not required to run the API or frontend.
+- **LLM Orchestration** — Flexible provider support (GitHub Models, OpenRouter, etc.); swappable prompt templates for each feature.
+- **Resume Parsing** — Extracts structured data (skills, experience, education) from uploaded PDFs and text.
+- **Lightweight Backend** — Optimized for resource-constrained environments; single-worker design with shared HTTP clients.
+- **Modular Architecture** — Each feature (analysis, enhancement, interviews, quizzes, recommendations) is independently pluggable.
 
 ## Testing
 
-Backend tests can be run from the API folder:
+Run backend tests from the `backend/api/` folder:
 
 ```bash
-cd backend/api
 python test_api.py
 ```
+## n8n Workflows (Optional)
 
-## Notes and Recommendations
-
-- The backend is tuned for low-memory VPS (1GB RAM): single worker, shared HTTP client, reduced concurrency limits.
-- Use n8n for complex pipelines, file handling, or Google Drive integrations; use the API for low-latency, direct frontend requests.
-- See `ENDPOINTS.md` for full endpoint details and request/response examples.
+Pre-built workflow templates are available in `backend/n8n-workflows/`. These enable advanced automation (e.g., scheduled job fetches, multi-step analysis pipelines, third-party integrations) but are not required for core app functionality.
 
 ## Contributing
 
-If you'd like to contribute, please open an issue or PR describing the change.
+Contributions are welcome! Please open an issue or PR with:
+- Feature requests or bug reports
+- Improvements to prompts, LLM provider integrations, or resume parsing
+- New workflow templates or assessment types
 
 ---
-
-For detailed backend docs see `backend/README.md` and for frontend details see the `frontend` folder.
+For detailed backend docs, see `backend/README.md`. For frontend details, explore the `frontend/` folder.
