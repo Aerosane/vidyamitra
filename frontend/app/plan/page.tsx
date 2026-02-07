@@ -907,9 +907,19 @@ function JobRecommendation() {
                                 </div>
                               </div>
 
-                              <button className="w-full mt-3 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-medium rounded-lg transition-colors text-sm">
-                                Start Learning
-                              </button>
+                              <a
+                                href={resource.url || resource.link || `https://www.google.com/search?q=${encodeURIComponent(resource.title + ' ' + (resource.platform || ''))}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  const url = resource.url || resource.link || `https://www.google.com/search?q=${encodeURIComponent(resource.title + ' ' + (resource.platform || ''))}`;
+                                  window.open(url, '_blank');
+                                }}
+                                className="block w-full mt-3 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-medium rounded-lg transition-colors text-sm text-center"
+                              >
+                                🔗 Start Learning
+                              </a>
                             </div>
                           ))}
                         </div>
