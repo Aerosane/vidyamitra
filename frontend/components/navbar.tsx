@@ -45,13 +45,13 @@ const NavBar = () => {
         <div className="relative w-8 h-8">
           <Image
             src="/logo.svg"
-            alt="The Resume Hub Logo"
+            alt="VidyaMitra Logo"
             fill
             className="object-contain"
           />
         </div>
         <span className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-          The Resume Hub
+          VidyaMitra
         </span>
       </Link>
 

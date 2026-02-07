@@ -150,7 +150,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="py-8 bg-gray-950 text-center text-gray-500 border-t border-gray-900 relative z-10">
-        <p>&copy; {new Date().getFullYear()} The Resume Hub. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} VidyaMitra. All rights reserved.</p>
       </footer>
     </div>
   );

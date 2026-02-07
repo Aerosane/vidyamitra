@@ -6,7 +6,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'The Resume Hub',
+  title: 'VidyaMitra',
   description: 'Your personalized career journey starts here',
   icons: {
     icon: '/logo.svg',
