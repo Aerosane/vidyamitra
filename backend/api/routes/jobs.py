@@ -144,7 +144,7 @@ async def job_search_history(user: dict = Depends(get_current_user)):
     client = db._get_client()
     if not client:
         return {"searches": []}
-    result = client.table("job_searches").select("*").eq(
+    result = client.table("job_recommendations").select("*").eq(
         "user_id", user["user_id"]
     ).order("created_at", desc=True).execute()
     
@@ -158,7 +158,7 @@ async def get_job_search(search_id: str, user: dict = Depends(get_current_user))
     client = db._get_client()
     if not client:
         raise HTTPException(status_code=404, detail="Search not found")
-    result = client.table("job_searches").select("*").eq(
+    result = client.table("job_recommendations").select("*").eq(
         "id", search_id
     ).eq("user_id", user["user_id"]).single().execute()
     

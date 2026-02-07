@@ -36,8 +36,8 @@ async def generate_learning_plan(
     
     saved = await db.save_learning_plan(
         user_id=user["user_id"],
-        gaps=request.gaps,
-        plan=plan
+        target_role=request.role,
+        plan={"gaps": request.gaps, "plan": plan}
     )
     
     return {

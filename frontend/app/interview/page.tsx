@@ -245,8 +245,15 @@ function MockInterview() {
 
       // Move to next question if interview is not complete
       if (!data.is_complete && currentQuestionIndex < result.questions.length - 1) {
+        const nextIdx = currentQuestionIndex + 1;
         setTimeout(() => {
-          setCurrentQuestionIndex(currentQuestionIndex + 1);
+          setCurrentQuestionIndex(nextIdx);
+          // Speak next question after voice response finishes
+          if (speechEnabled && result?.questions?.[nextIdx]) {
+            const q = result.questions[nextIdx];
+            const text = q?.text || q?.question || `Question ${nextIdx + 1}`;
+            setTimeout(() => speakText(text), 500);
+          }
         }, 1000);
       } else if (data.is_complete) {
         setInterviewCompleted(true);
@@ -358,6 +365,10 @@ function MockInterview() {
           ...prev,
           [questionIndex]: data.evaluation
         }));
+        // Speak evaluation feedback in voice mode
+        if (voiceMode && speechEnabled && data.evaluation.feedback) {
+          speakText(`Score: ${data.evaluation.score} out of 10. ${data.evaluation.feedback}`);
+        }
       }
     } catch (err) {
       setError(err.message);
@@ -369,6 +380,12 @@ function MockInterview() {
   const startInterview = () => {
     setInterviewStarted(true);
     setCurrentQuestionIndex(0);
+    // Speak first question in voice mode
+    if (voiceMode && speechEnabled && result?.questions?.[0]) {
+      const q = result.questions[0];
+      const text = q?.text || q?.question || 'Question 1';
+      setTimeout(() => speakText(text), 500);
+    }
   };
 
   const handleAnswerChange = (answer) => {
@@ -380,10 +397,17 @@ function MockInterview() {
 
   const nextQuestion = () => {
     if (currentQuestionIndex < result.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      const nextIdx = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIdx);
       setVoiceResponse(null);
       setVoiceTranscript('');
       setInterimTranscript('');
+      // Speak next question in voice mode
+      if (voiceMode && speechEnabled && result?.questions?.[nextIdx]) {
+        const q = result.questions[nextIdx];
+        const text = q?.text || q?.question || `Question ${nextIdx + 1}`;
+        setTimeout(() => speakText(text), 300);
+      }
     } else {
       setInterviewCompleted(true);
     }
@@ -391,8 +415,15 @@ function MockInterview() {
 
   const prevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      const prevIdx = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(prevIdx);
       setVoiceResponse(null);
+      // Speak previous question in voice mode
+      if (voiceMode && speechEnabled && result?.questions?.[prevIdx]) {
+        const q = result.questions[prevIdx];
+        const text = q?.text || q?.question || `Question ${prevIdx + 1}`;
+        setTimeout(() => speakText(text), 300);
+      }
     }
   };
 
@@ -616,17 +647,21 @@ function MockInterview() {
                   )}
                   <button
                     onClick={toggleSpeech}
-                    className="flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gray-700/50 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all"
+                    className={`flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 font-semibold rounded-xl transition-all ${
+                      speechEnabled
+                        ? 'bg-green-500/20 border border-green-500/30 hover:bg-green-500/30 text-green-300'
+                        : 'bg-gray-700/50 hover:bg-gray-700 text-gray-400'
+                    }`}
                   >
                     {speechEnabled ? (
                       <>
-                        <VolumeX className="w-5 h-5" />
-                        Disable Speech
+                        <Volume2 className="w-5 h-5" />
+                        Speaker ON
                       </>
                     ) : (
                       <>
-                        <Volume2 className="w-5 h-5" />
-                        Enable Speech
+                        <VolumeX className="w-5 h-5" />
+                        Speaker OFF
                       </>
                     )}
                   </button>
@@ -746,14 +781,15 @@ function MockInterview() {
                               <button
                                 onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
                                 className={`p-3 rounded-xl transition-all ${isRecording
-                                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                                  : 'bg-gray-700/50 hover:bg-gray-700 text-white'
+                                  ? 'bg-green-500 hover:bg-green-600 text-white animate-pulse'
+                                  : 'bg-red-500/70 hover:bg-red-600 text-white'
                                   }`}
+                                title={isRecording ? 'Mic is ON — click to stop' : 'Mic is OFF — click to start'}
                               >
                                 {isRecording ? (
-                                  <MicOff className="w-5 h-5" />
-                                ) : (
                                   <Mic className="w-5 h-5" />
+                                ) : (
+                                  <MicOff className="w-5 h-5" />
                                 )}
                               </button>
 

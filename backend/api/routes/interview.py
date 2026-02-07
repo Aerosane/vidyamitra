@@ -43,8 +43,7 @@ async def start_interview(
     saved = await db.save_interview(
         user_id=user["user_id"],
         domain=request.domain,
-        role=request.role,
-        questions=questions
+        role=request.role
     )
     
     return {
@@ -83,8 +82,7 @@ async def complete_interview(
     
     saved = await db.update_interview(
         interview_id=request.interview_id,
-        answers=request.answers,
-        score=total_score
+        status="completed"
     )
     
     return {

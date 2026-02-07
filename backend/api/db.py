@@ -319,32 +319,38 @@ async def get_quizzes(user_id: str) -> list:
 # ═══════════════════════════════════════════════════════════════
 
 async def save_job_search(user_id: str, skills: list, role: str, results: list) -> dict:
-    """Save job search results"""
+    """Save job recommendation results to job_recommendations table"""
     client = _get_client()
     if not client:
         return {"id": "mock-no-db"}
     try:
-        data = {
-            "user_id": user_id,
-            "skills": skills,
-            "role": role,
-            "results": results,
-            "created_at": _now()
-        }
-        result = client.table("job_searches").insert(data).execute()
-        return result.data[0] if result.data else {"id": "mock-no-db"}
+        saved_ids = []
+        for job in results:
+            data = {
+                "user_id": user_id,
+                "recommended_role": job.get("title", role),
+                "match_score": job.get("match_percent", 0),
+                "salary_range": job.get("salary_range_usd", ""),
+                "growth_outlook": job.get("growth_outlook", ""),
+                "skills_matched": job.get("skills_matched", skills),
+                "skills_to_learn": job.get("skills_to_learn", []),
+            }
+            result = client.table("job_recommendations").insert(data).execute()
+            if result.data:
+                saved_ids.append(result.data[0]["id"])
+        return {"id": saved_ids[0] if saved_ids else "mock-no-db", "count": len(saved_ids)}
     except Exception as e:
         print(f"[DB] save_job_search error: {e}")
         return {"id": "mock-no-db"}
 
 
 async def get_job_searches(user_id: str) -> list:
-    """Get job search history for a user"""
+    """Get job recommendation history for a user"""
     client = _get_client()
     if not client:
         return []
     try:
-        result = client.table("job_searches").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        result = client.table("job_recommendations").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
         return result.data or []
     except Exception as e:
         print(f"[DB] get_job_searches error: {e}")

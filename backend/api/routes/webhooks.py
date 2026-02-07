@@ -253,8 +253,7 @@ async def n8n_complete_interview(payload: N8nPayload):
     
     saved = await db.update_interview(
         interview_id=interview_id,
-        answers=answers,
-        score=total_score
+        status="completed"
     )
     
     return {"status": "ok", "final_score": total_score, "interview": saved}

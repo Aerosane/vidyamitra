@@ -49,7 +49,7 @@ async def analyze_resume(
     
     saved = await db.save_resume(
         user_id=user["user_id"],
-        file_id=request.file_id or "",
+        resume_text=request.resume_text,
         analysis=analysis
     )
     

@@ -21,7 +21,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a Senior Technical Interviewer.\nEvaluate the candidate's answer to the following technical question.\n\nQuestion: {{ $json.body.data.question }}\nCandidate Answer: {{ $json.body.data.user_answer }}\nDomain: {{ $json.body.data.domain }}\n\nCriteria:\n- Check for technical accuracy.\n- Check for depth and clarity.\n\nReturn a STRICT JSON object:\n{\n  \"score\": (integer 1-10),\n  \"feedback\": \"(String: 1-2 sentences on what was good/bad)\",\n  \"is_correct\": (boolean),\n  \"ideal_answer\": \"(String: A concise, perfect summary of the answer)\"\n}",
+        "text": "=You are a Senior Technical Interviewer.\nEvaluate the candidate's answer to the following technical question.\n\nQuestion: {{ $json.body.data.question }}\nCandidate Answer: {{ $json.body.data.user_answer || $json.body.data.answer }}\nDomain: {{ $json.body.data.domain }}\n\nCriteria:\n- Check for technical accuracy.\n- Check for depth and clarity.\n- Assess communication quality.\n\nReturn a STRICT JSON object:\n{\n  \"score\": (integer 0-100),\n  \"grade\": (string like \"A\", \"B+\", \"C\"),\n  \"feedback\": \"(String: 2-3 sentences with specific feedback)\",\n  \"strengths\": [\"(array of 2-3 specific strengths)\"],\n  \"improvements\": [\"(array of 2-3 areas to improve)\"],\n  \"would_hire\": (boolean based on answer quality)\n}\nOutput ONLY valid JSON. No markdown, no extra text.",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",

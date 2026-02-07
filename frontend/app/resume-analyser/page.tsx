@@ -1,7 +1,12 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
+import ReactMarkdown from 'react-markdown';
+import html2pdf from 'html2pdf.js';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 function ResumeAnalyser() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -22,6 +27,51 @@ function ResumeAnalyser() {
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [pdfParsing, setPdfParsing] = useState(false);
+  const [pdfFileName, setPdfFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Parse PDF file to text
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Please upload a PDF file.');
+      return;
+    }
+
+    setPdfParsing(true);
+    setError('');
+    setPdfFileName(file.name);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n\n';
+      }
+
+      const cleaned = fullText.trim();
+      if (!cleaned) {
+        setError('Could not extract text from PDF. It may be image-based — try pasting text manually.');
+      } else {
+        setResumeText(cleaned);
+      }
+    } catch (err: any) {
+      setError(`Failed to parse PDF: ${err.message}`);
+    } finally {
+      setPdfParsing(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Get user ID from Clerk - prioritize username
   const getUserId = () => {
@@ -102,6 +152,44 @@ function ResumeAnalyser() {
       console.error('Clipboard error:', err);
       alert('❌ Could not access clipboard. Please copy manually.');
     }
+  };
+
+  const resumeContentRef = useRef<HTMLDivElement>(null);
+
+  // Strip markdown code fences from LLM response
+  const cleanMarkdown = (text: string) => {
+    return text.replace(/^```(?:markdown)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  };
+
+  const handleExportPdf = () => {
+    const el = resumeContentRef.current;
+    if (!el) return;
+    // Clone element so we don't mutate the visible DOM
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.style.cssText = 'position:fixed;left:-9999px;top:0;background:white;color:#111;padding:32px;width:800px;';
+    clone.querySelectorAll('h1, h2, h3, h4').forEach((h) => {
+      (h as HTMLElement).style.color = '#111';
+    });
+    clone.querySelectorAll('p, li, span').forEach((p) => {
+      (p as HTMLElement).style.color = '#333';
+    });
+    clone.querySelectorAll('strong, b').forEach((b) => {
+      (b as HTMLElement).style.color = '#111';
+    });
+    clone.querySelectorAll('hr').forEach((hr) => {
+      (hr as HTMLElement).style.borderColor = '#ccc';
+    });
+    document.body.appendChild(clone);
+    const opt = {
+      margin: [12, 12, 12, 12],
+      filename: `resume-${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+    html2pdf().set(opt).from(clone).toPdf().save().then(() => {
+      document.body.removeChild(clone);
+    });
   };
 
   const handleAnalyze = async () => {
@@ -385,6 +473,12 @@ function ResumeAnalyser() {
     if (!result) return null;
 
     if (activeTab === 'analyze' && result.analysis) {
+      const a = result.analysis;
+      const strengths = a.skills_found || a.strengths || [];
+      const gaps = a.gaps || a.missing_keywords || [];
+      const improvements = a.improvements || [];
+      const certs = a.certifications_recommended || [];
+      const outdated = a.skills_outdated || [];
       return (
         <div className="bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 md:p-8">
           <h2 className="text-2xl font-bold text-white mb-6">Resume Analysis</h2>
@@ -393,58 +487,102 @@ function ResumeAnalyser() {
           <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-xl p-8 mb-6 text-center">
             <h3 className="text-gray-300 mb-2">Overall Score</h3>
             <div className="text-5xl font-bold text-white mb-2">
-              {result.analysis.score}/100 ({result.analysis.grade})
+              {a.score}/100 ({a.grade})
             </div>
+            {a.career_trajectory && (
+              <p className="text-gray-400 mt-2">Career Trajectory: <span className="text-purple-300 capitalize">{a.career_trajectory}</span></p>
+            )}
           </div>
 
-          {/* Category Scores */}
-          {result.analysis.categories && (
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-white mb-4">Category Breakdown</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(result.analysis.categories).map(([category, score]) => (
-                  <div key={category} className="bg-gray-900/30 p-4 rounded-lg text-center">
-                    <div className="text-gray-300 capitalize mb-2">{category}</div>
-                    <div className="text-2xl font-bold text-white">{score}/25</div>
+          {/* Strengths & Gaps */}
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            {strengths.length > 0 && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
+                <h3 className="text-lg font-bold text-green-400 mb-4">✅ {a.skills_found ? 'Skills Found' : 'Strengths'}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {strengths.map((item, index) => {
+                    const text = typeof item === 'string' ? item : JSON.stringify(item);
+                    return (
+                      <span key={index} className={`px-3 py-1 rounded-full text-sm ${
+                        a.skills_hot?.includes(item)
+                          ? 'bg-green-500/30 text-green-200 border border-green-400/50'
+                          : 'bg-green-500/20 text-green-300'
+                      }`}>
+                        {text} {a.skills_hot?.includes(item) ? '🔥' : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {gaps.length > 0 && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+                <h3 className="text-lg font-bold text-yellow-400 mb-4">⚠️ {a.gaps ? 'Skill Gaps' : 'Missing Keywords'}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {gaps.map((item, index) => {
+                    const text = typeof item === 'string' ? item : (item.skill || JSON.stringify(item));
+                    return (
+                      <span key={index} className="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-sm">
+                        {text}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Improvements */}
+          {improvements.length > 0 && (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-bold text-blue-400 mb-4">📝 Suggested Improvements</h3>
+              <div className="space-y-4">
+                {improvements.map((item, index) => (
+                  <div key={index} className="bg-gray-900/30 rounded-lg p-4">
+                    {typeof item === 'string' ? (
+                      <p className="text-gray-300">• {item}</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                            item.priority === 'high' ? 'bg-red-500/30 text-red-300'
+                            : item.priority === 'medium' ? 'bg-yellow-500/30 text-yellow-300'
+                            : 'bg-blue-500/30 text-blue-300'
+                          }`}>{item.priority || 'tip'}</span>
+                          <span className="text-white font-semibold">{item.issue || item.title || ''}</span>
+                        </div>
+                        {item.fix && <p className="text-gray-400 text-sm ml-1">💡 {item.fix}</p>}
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Strengths & Improvements */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            {result.analysis.strengths && result.analysis.strengths.length > 0 && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-green-400 mb-4">✅ Strengths</h3>
-                <ul className="space-y-2">
-                  {result.analysis.strengths.map((strength, index) => (
-                    <li key={index} className="text-gray-300">• {strength}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {result.analysis.improvements && result.analysis.improvements.length > 0 && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-yellow-400 mb-4">📝 Suggested Improvements</h3>
-                <ul className="space-y-2">
-                  {result.analysis.improvements.map((improvement, index) => (
-                    <li key={index} className="text-gray-300">• {improvement}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          {/* Missing Keywords */}
-          {result.analysis.keywords_missing && result.analysis.keywords_missing.length > 0 && (
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-6">
-              <h3 className="text-lg font-bold text-blue-400 mb-4">🔍 Missing Keywords</h3>
+          {/* Certifications Recommended */}
+          {certs.length > 0 && (
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-bold text-purple-400 mb-4">🎓 Recommended Certifications</h3>
               <div className="flex flex-wrap gap-2">
-                {result.analysis.keywords_missing.map((keyword, index) => (
-                  <span key={index} className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm">
-                    {keyword}
+                {certs.map((cert, index) => (
+                  <span key={index} className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">
+                    {typeof cert === 'string' ? cert : cert.name || JSON.stringify(cert)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Outdated Skills */}
+          {outdated.length > 0 && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-bold text-red-400 mb-4">⏳ Outdated Skills</h3>
+              <div className="flex flex-wrap gap-2">
+                {outdated.map((skill, index) => (
+                  <span key={index} className="px-3 py-1 bg-red-500/20 text-red-300 rounded-full text-sm">
+                    {typeof skill === 'string' ? skill : JSON.stringify(skill)}
                   </span>
                 ))}
               </div>
@@ -452,25 +590,25 @@ function ResumeAnalyser() {
           )}
 
           {/* Market Readiness */}
-          {result.analysis.market_readiness && (
-            <div className={`border rounded-xl p-6 mb-6 ${result.analysis.market_readiness === 'high'
+          {a.market_readiness && (
+            <div className={`border rounded-xl p-6 mb-6 ${a.market_readiness === 'high'
               ? 'bg-green-500/10 border-green-500/30'
-              : result.analysis.market_readiness === 'medium'
+              : a.market_readiness === 'medium'
                 ? 'bg-yellow-500/10 border-yellow-500/30'
                 : 'bg-red-500/10 border-red-500/30'
               }`}>
-              <h3 className={`text-lg font-bold mb-4 ${result.analysis.market_readiness === 'high'
+              <h3 className={`text-lg font-bold mb-4 ${a.market_readiness === 'high'
                 ? 'text-green-400'
-                : result.analysis.market_readiness === 'medium'
+                : a.market_readiness === 'medium'
                   ? 'text-yellow-400'
                   : 'text-red-400'
                 }`}>
-                📊 Market Readiness: {result.analysis.market_readiness.charAt(0).toUpperCase() + result.analysis.market_readiness.slice(1)}
+                📊 Market Readiness: {a.market_readiness.charAt(0).toUpperCase() + a.market_readiness.slice(1)}
               </h3>
               <p className="text-gray-300">
-                {result.analysis.market_readiness === 'high'
+                {a.market_readiness === 'high'
                   ? 'Your resume is well-positioned for the current job market!'
-                  : result.analysis.market_readiness === 'medium'
+                  : a.market_readiness === 'medium'
                     ? 'Your resume has good potential but could benefit from some improvements.'
                     : 'Consider enhancing your resume to better align with market demands.'}
               </p>
@@ -478,10 +616,10 @@ function ResumeAnalyser() {
           )}
 
           {/* Summary */}
-          {result.analysis.summary && (
+          {a.summary && (
             <div className="bg-gray-900/30 border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-lg font-bold text-white mb-4">📋 Summary</h3>
-              <p className="text-gray-300">{result.analysis.summary}</p>
+              <p className="text-gray-300">{a.summary}</p>
             </div>
           )}
         </div>
@@ -489,53 +627,77 @@ function ResumeAnalyser() {
     }
 
     if (activeTab === 'enhance' && result.enhanced) {
+      const e = result.enhanced;
       return (
         <div className="bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 md:p-8">
           <h2 className="text-2xl font-bold text-white mb-6">Resume Enhancement Results</h2>
 
-          {/* ATS Score Comparison */}
+          {/* Score Comparison */}
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-white mb-4">ATS Score Improvement</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Score Improvement</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
                 <div className="text-gray-300 mb-2">Before Enhancement</div>
-                <div className="text-4xl font-bold text-white">{result.enhanced.ats_score_before}%</div>
+                <div className="text-4xl font-bold text-white">{e.score_before || e.ats_score_before || 0}%</div>
+                {e.market_readiness_before && <p className="text-gray-400 mt-1 capitalize">Market: {e.market_readiness_before}</p>}
               </div>
               <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 text-center">
                 <div className="text-gray-300 mb-2">After Enhancement</div>
-                <div className="text-4xl font-bold text-white">{result.enhanced.ats_score_after}%</div>
+                <div className="text-4xl font-bold text-white">{e.score_after || e.ats_score_after || 0}%</div>
+                {e.market_readiness_after && <p className="text-gray-400 mt-1 capitalize">Market: {e.market_readiness_after}</p>}
               </div>
             </div>
           </div>
 
           {/* Changes Made */}
-          {result.enhanced.changes && result.enhanced.changes.length > 0 && (
+          {(e.changes_made || e.changes) && (e.changes_made || e.changes).length > 0 && (
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-6">
               <h3 className="text-lg font-bold text-blue-400 mb-4">Improvements Made</h3>
-              <ul className="space-y-2">
-                {result.enhanced.changes.map((change, index) => (
-                  <li key={index} className="text-gray-300">✓ {change}</li>
+              <div className="space-y-3">
+                {(e.changes_made || e.changes).map((change, index) => (
+                  <div key={index} className="bg-gray-900/30 rounded-lg p-3">
+                    {typeof change === 'string' ? (
+                      <p className="text-gray-300">✓ {change}</p>
+                    ) : (
+                      <>
+                        <span className="text-cyan-300 font-semibold">{change.section || 'Change'}:</span>
+                        {change.before && <p className="text-red-300/70 text-sm mt-1 line-through">{change.before}</p>}
+                        {change.after && <p className="text-green-300 text-sm mt-1">→ {change.after}</p>}
+                      </>
+                    )}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
           {/* Enhanced Resume Text */}
-          {result.enhanced.enhanced_resume && (
+          {e.enhanced_resume && (
             <div className="bg-gray-900/30 border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-lg font-bold text-white mb-4">Enhanced Resume</h3>
-              <pre className="bg-black/30 p-4 rounded-lg overflow-x-auto text-gray-300 text-sm whitespace-pre-wrap mb-4">
-                {result.enhanced.enhanced_resume}
-              </pre>
-              <button
-                onClick={handleCopyToClipboard}
-                className={`px-6 py-3 rounded-lg font-semibold transition-all ${copied
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
-                  }`}
-              >
-                {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
-              </button>
+              <div ref={resumeContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-4
+                prose-headings:text-purple-300 prose-strong:text-white prose-li:text-gray-300 prose-p:text-gray-300
+                prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
+                prose-ul:my-2 prose-li:my-0.5">
+                <ReactMarkdown>{cleanMarkdown(e.enhanced_resume)}</ReactMarkdown>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCopyToClipboard}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${copied
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
+                    }`}
+                >
+                  {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
+                </button>
+                <button
+                  onClick={handleExportPdf}
+                  className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all hover:scale-105"
+                >
+                  📄 Export PDF
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -546,18 +708,29 @@ function ResumeAnalyser() {
       return (
         <div className="bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 md:p-8">
           <h2 className="text-2xl font-bold text-white mb-6">Generated Resume</h2>
-          <pre className="bg-black/30 p-6 rounded-lg overflow-x-auto text-gray-300 text-sm whitespace-pre-wrap mb-6">
-            {result.resume}
-          </pre>
-          <button
-            onClick={handleCopyToClipboard}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${copied
-              ? 'bg-green-500 text-white'
-              : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
-              }`}
-          >
-            {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
-          </button>
+          <div ref={resumeContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-6
+            prose-headings:text-purple-300 prose-strong:text-white prose-li:text-gray-300 prose-p:text-gray-300
+            prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
+            prose-ul:my-2 prose-li:my-0.5">
+            <ReactMarkdown>{cleanMarkdown(result.resume)}</ReactMarkdown>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleCopyToClipboard}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${copied
+                ? 'bg-green-500 text-white'
+                : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
+                }`}
+            >
+              {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
+            </button>
+            <button
+              onClick={handleExportPdf}
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all hover:scale-105"
+            >
+              📄 Export PDF
+            </button>
+          </div>
         </div>
       );
     }
@@ -947,11 +1120,32 @@ function ResumeAnalyser() {
           {activeTab === 'analyze' || activeTab === 'enhance' ? (
             <>
               <div className="mb-6">
-                <label className="block text-white mb-3">Resume Text:</label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-white">Resume Text:</label>
+                  <div className="flex items-center gap-3">
+                    {pdfFileName && (
+                      <span className="text-sm text-purple-300">📄 {pdfFileName}</span>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      ref={fileInputRef}
+                      onChange={handlePdfUpload}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={pdfParsing}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-sm font-semibold rounded-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {pdfParsing ? '⏳ Parsing...' : '📎 Upload PDF'}
+                    </button>
+                  </div>
+                </div>
                 <textarea
                   value={resumeText}
                   onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste your resume text here..."
+                  placeholder="Paste your resume text here or upload a PDF..."
                   className="w-full h-64 p-6 bg-gray-700/50 border border-purple-500/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 transition-colors"
                 />
               </div>

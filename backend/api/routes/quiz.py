@@ -20,6 +20,7 @@ class EvaluateQuizRequest(BaseModel):
     skill: str
     questions: list
     answers: list
+    difficulty: str = "intermediate"
 
 
 @router.post("/generate")
@@ -57,12 +58,18 @@ async def evaluate_quiz(
     
     result = llm.evaluate_quiz(request.questions, request.answers)
     
+    # Merge answers into questions for storage
+    questions_with_answers = []
+    for i, q in enumerate(request.questions):
+        q_copy = dict(q)
+        q_copy["user_answer"] = request.answers[i] if i < len(request.answers) else None
+        questions_with_answers.append(q_copy)
+
     saved = await db.save_quiz(
         user_id=user["user_id"],
         skill=request.skill,
-        questions=request.questions,
-        answers=request.answers,
-        result_data=result
+        difficulty=request.difficulty,
+        questions=questions_with_answers
     )
     
     return {
