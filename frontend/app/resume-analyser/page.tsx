@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import ReactMarkdown from 'react-markdown';
-import html2pdf from 'html2pdf.js';
 import * as pdfjsLib from 'pdfjs-dist';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -154,40 +153,37 @@ function ResumeAnalyser() {
     }
   };
 
-  const resumeContentRef = useRef<HTMLDivElement>(null);
+  const enhanceContentRef = useRef<HTMLDivElement>(null);
+  const generateContentRef = useRef<HTMLDivElement>(null);
 
   // Strip markdown code fences from LLM response
   const cleanMarkdown = (text: string) => {
     return text.replace(/^```(?:markdown)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   };
 
-  const handleExportPdf = () => {
-    const el = resumeContentRef.current;
+  const handleExportPdf = async (source: 'enhance' | 'generate') => {
+    const el = source === 'enhance' ? enhanceContentRef.current : generateContentRef.current;
     if (!el) return;
-    // Clone element so we don't mutate the visible DOM
     const clone = el.cloneNode(true) as HTMLElement;
     clone.style.cssText = 'position:fixed;left:-9999px;top:0;background:white;color:#111;padding:32px;width:800px;';
-    clone.querySelectorAll('h1, h2, h3, h4').forEach((h) => {
-      (h as HTMLElement).style.color = '#111';
-    });
-    clone.querySelectorAll('p, li, span').forEach((p) => {
-      (p as HTMLElement).style.color = '#333';
-    });
-    clone.querySelectorAll('strong, b').forEach((b) => {
-      (b as HTMLElement).style.color = '#111';
-    });
-    clone.querySelectorAll('hr').forEach((hr) => {
-      (hr as HTMLElement).style.borderColor = '#ccc';
+    clone.querySelectorAll('*').forEach((node) => {
+      const h = node as HTMLElement;
+      if (['H1','H2','H3','H4','STRONG','B'].includes(node.tagName)) h.style.color = '#111';
+      else if (['P','LI','SPAN','TD','TH'].includes(node.tagName)) h.style.color = '#333';
+      else if (node.tagName === 'HR') h.style.borderColor = '#ccc';
+      else if (node.tagName === 'A') h.style.color = '#1a56db';
     });
     document.body.appendChild(clone);
     const opt = {
       margin: [12, 12, 12, 12],
-      filename: `resume-${new Date().toISOString().slice(0, 10)}.pdf`,
+      filename: `resume-${source}-${new Date().toISOString().slice(0, 10)}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
     };
-    html2pdf().set(opt).from(clone).toPdf().save().then(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const html2pdf = (await import('html2pdf.js')).default;
+    html2pdf().set(opt).from(clone).save().finally(() => {
       document.body.removeChild(clone);
     });
   };
@@ -675,7 +671,7 @@ function ResumeAnalyser() {
           {e.enhanced_resume && (
             <div className="bg-gray-900/30 border border-gray-700/50 rounded-xl p-6">
               <h3 className="text-lg font-bold text-white mb-4">Enhanced Resume</h3>
-              <div ref={resumeContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-4
+              <div ref={enhanceContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-4
                 prose-headings:text-purple-300 prose-strong:text-white prose-li:text-gray-300 prose-p:text-gray-300
                 prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
                 prose-ul:my-2 prose-li:my-0.5">
@@ -692,7 +688,7 @@ function ResumeAnalyser() {
                   {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
                 </button>
                 <button
-                  onClick={handleExportPdf}
+                  onClick={() => handleExportPdf('enhance')}
                   className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all hover:scale-105"
                 >
                   📄 Export PDF
@@ -708,7 +704,7 @@ function ResumeAnalyser() {
       return (
         <div className="bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-6 md:p-8">
           <h2 className="text-2xl font-bold text-white mb-6">Generated Resume</h2>
-          <div ref={resumeContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-6
+          <div ref={generateContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-6
             prose-headings:text-purple-300 prose-strong:text-white prose-li:text-gray-300 prose-p:text-gray-300
             prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
             prose-ul:my-2 prose-li:my-0.5">
@@ -725,7 +721,7 @@ function ResumeAnalyser() {
               {copied ? '✅ Copied!' : '📋 Copy to Clipboard'}
             </button>
             <button
-              onClick={handleExportPdf}
+              onClick={() => handleExportPdf('generate')}
               className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all hover:scale-105"
             >
               📄 Export PDF
