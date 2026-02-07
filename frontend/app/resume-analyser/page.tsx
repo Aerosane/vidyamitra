@@ -674,7 +674,7 @@ function ResumeAnalyser() {
               <div ref={enhanceContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-4
                 prose-headings:text-purple-300 prose-strong:text-white prose-li:text-gray-300 prose-p:text-gray-300
                 prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
-                prose-ul:my-2 prose-li:my-0.5">
+                prose-ul:my-2 prose-li:my-[2px]">
                 <ReactMarkdown>{cleanMarkdown(e.enhanced_resume)}</ReactMarkdown>
               </div>
               <div className="flex gap-3">
@@ -707,7 +707,7 @@ function ResumeAnalyser() {
           <div ref={generateContentRef} className="prose prose-invert prose-sm max-w-none bg-gray-900/50 p-8 rounded-lg overflow-x-auto mb-6
             prose-headings:text-purple-300 prose-strong:text-white prose-li:text-gray-300 prose-p:text-gray-300
             prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2
-            prose-ul:my-2 prose-li:my-0.5">
+            prose-ul:my-2 prose-li:my-[2px]">
             <ReactMarkdown>{cleanMarkdown(result.resume)}</ReactMarkdown>
           </div>
           <div className="flex gap-3">
