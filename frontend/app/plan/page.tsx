@@ -700,9 +700,16 @@ function JobRecommendation() {
                         href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}${location ? `&location=${encodeURIComponent(location)}` : ''}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all hover:scale-105"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.open(
+                            `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}${location ? `&location=${encodeURIComponent(location)}` : ''}`,
+                            '_blank'
+                          );
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all hover:scale-105"
                       >
-                        View Job Details & Apply →
+                        🔗 View Job Details & Apply →
                       </a>
                     </div>
                   </div>
